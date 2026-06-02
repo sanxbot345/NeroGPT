@@ -1,0 +1,6 @@
+{
+  "name": "neroGPT Chatbot",
+  "description": "An elegant, highly polished, and responsive light-themed neroGPT Chatbot with a neat sidebar layout optimized for both mobile and desktop screens.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

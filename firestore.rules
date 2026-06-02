@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Catch-all safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUser(data) {
+      return data.userId is string 
+        && data.userId.size() <= 128
+        && data.email is string
+        && data.email.size() <= 256
+        && (!data.keys().contains('displayName') || (data.displayName == null || (data.displayName is string && data.displayName.size() <= 128)))
+        && (!data.keys().contains('photoURL') || (data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 512)))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidConversation(data) {
+      return data.id is string
+        && data.id.size() <= 128
+        && data.title is string
+        && data.title.size() <= 256
+        && data.personalityId is string
+        && data.personalityId.size() <= 128
+        && data.messages is list;
+    }
+
+    // 3. Document rules
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) 
+        && isValidId(userId) 
+        && isValidUser(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt;
+
+      match /conversations/{conversationId} {
+        allow read, write: if isOwner(userId) 
+          && isValidId(userId) 
+          && isValidId(conversationId)
+          && (request.method == 'delete' || isValidConversation(incoming()));
+      }
+    }
+  }
+}

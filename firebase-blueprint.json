@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "Contains public identity and metadata for users",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The firebase auth UID"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email identifier of the user"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Optional Avatar image URL"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the profile was generated"
+        }
+      },
+      "required": ["userId", "email", "createdAt"]
+    },
+    "conversations": {
+      "title": "User Conversations",
+      "description": "Contains chat history conversations and list of messages for a user",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique conversation identifier"
+        },
+        "title": {
+          "type": "string",
+          "description": "Subject or title of conversation"
+        },
+        "personalityId": {
+          "type": "string",
+          "description": "The active assistant personality ID used"
+        },
+        "messages": {
+          "type": "array",
+          "description": "Nested list of messages, each having id, role, text, timestamp"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the conversation was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the conversation was last updated"
+        }
+      },
+      "required": ["id", "title", "createdAt", "personalityId", "messages"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "users",
+      "description": "Individual user document mapped to their Auth UID"
+    },
+    "users/{userId}/conversations/{conversationId}": {
+      "schema": "conversations",
+      "description": "Conversation document containing individual chat histories for the user"
+    }
+  }
+}
