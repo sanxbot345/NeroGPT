@@ -23,6 +23,24 @@ const INITIAL_CONVERSATION: Conversation = {
   personalityId: "asisten-umum"
 };
 
+const fileToBase64 = (file: File): Promise<{ mimeType: string; data: string; name: string }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      const commaIndex = result.indexOf(",");
+      const data = result.slice(commaIndex + 1);
+      resolve({
+        mimeType: file.type,
+        data: data,
+        name: file.name
+      });
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -178,10 +196,13 @@ export default function App() {
   const handleSendMessage = async (text: string, options?: { thinking?: boolean, search?: boolean, file?: File | null }) => {
     if (!activeConversationId || !activeConversation) return;
 
-    let fileData = undefined;
+    let attachment = undefined;
     if (options?.file) {
-      // Basic read to base64 if needed, omitted here since it might be complex
-      // we'll mainly use options.search and options.thinking
+      try {
+        attachment = await fileToBase64(options.file);
+      } catch (err) {
+        console.error("Gagal membaca file:", err);
+      }
     }
 
     // Create user message
@@ -189,7 +210,8 @@ export default function App() {
       id: `msg-${Date.now()}-user`,
       role: "user",
       text,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      ...(attachment ? { attachment } : {})
     };
 
     // Update conversation with user's message
@@ -243,6 +265,8 @@ export default function App() {
       const modelMsgId = `msg-${Date.now()}-model`;
       let sources: any[] = [];
 
+      let streamError: string | null = null;
+
       while (!done) {
         const { value, done: readerDone } = await reader.read();
         done = readerDone;
@@ -261,7 +285,8 @@ export default function App() {
                 const data = JSON.parse(dataStr);
                 
                 if (data.error) {
-                  throw new Error(data.error);
+                  streamError = data.error;
+                  break;
                 }
                 
                 if (data.groundingChunks) {
@@ -304,7 +329,12 @@ export default function App() {
               }
             }
           }
+          if (streamError) break;
         }
+      }
+
+      if (streamError) {
+        throw new Error(streamError);
       }
     } catch (error: any) {
       console.error("Error communicating with AI:", error);

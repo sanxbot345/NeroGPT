@@ -265,9 +265,28 @@ export default function ChatArea({
                       }`}
                     >
                       {isUser ? (
-                        <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap select-none">
-                          {msg.text}
-                        </p>
+                        <div className="flex flex-col">
+                          {msg.attachment && (
+                            <div className="mb-2 max-w-xs sm:max-w-md rounded-xl overflow-hidden border border-neutral-800 bg-neutral-900/40">
+                              {msg.attachment.mimeType.startsWith("image/") ? (
+                                <img
+                                  src={`data:${msg.attachment.mimeType};base64,${msg.attachment.data}`}
+                                  alt={msg.attachment.name}
+                                  className="max-h-48 w-auto object-contain mx-auto"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <div className="flex items-center gap-2 p-2 bg-neutral-950/40 text-neutral-300 text-[11px]">
+                                  <i className="fa-solid fa-file-invoice text-blue-400"></i>
+                                  <span className="truncate max-w-[150px] font-mono">{msg.attachment.name}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap select-none">
+                            {msg.text}
+                          </p>
+                        </div>
                       ) : (
                         <div className="text-xs leading-relaxed select-none markdown-container">
                           <SmoothMarkdown

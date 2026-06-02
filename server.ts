@@ -87,13 +87,28 @@ app.post("/api/chat", async (req, res) => {
 
     const ai = getAiClient();
 
-    // Convert frontend messages to @google/genai format
-    // Each message in history is mapped to { role, parts: [{ text }] }
-    // Allowed values for role are 'user' or 'model'
-    const contents = messages.map((msg: any) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }]
-    }));
+    // Convert frontend messages to @google/genai format, matching multimodal features
+    const contents = messages.map((msg: any) => {
+      const parts: any[] = [];
+      
+      // If there is an attachment, add the inlineData part first
+      if (msg.attachment && msg.attachment.data && msg.attachment.mimeType) {
+        parts.push({
+          inlineData: {
+            mimeType: msg.attachment.mimeType,
+            data: msg.attachment.data
+          }
+        });
+      }
+      
+      // Always add the text part
+      parts.push({ text: msg.text || "" });
+      
+      return {
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: parts
+      };
+    });
 
     const systemPrompt = (systemInstruction || 
       "Anda adalah asisten AI yang pintar, efisien, dan siap membantu pengguna dengan jawaban yang ringkas dan tepat. Hindari sapaan panjang. Format jawaban dengan markdown yang rapi.") + 
@@ -105,16 +120,17 @@ app.post("/api/chat", async (req, res) => {
       maxOutputTokens: 8192,
     };
     
-    // According to SKILL, gemini-3.5-flash is default general task model
-    let modelName = "gemini-3.5-flash"; // updated to gemini-3.5-flash
+    // If thinking is enabled, switch to gemini-3.1-pro-preview as it natively supports thinking level parameters.
+    // Otherwise use gemini-3.5-flash for general high performance tasks.
+    let modelName = "gemini-3.5-flash"; 
 
     if (search) {
       config.tools = [{ googleSearch: {} }];
     }
     
-    // using ThinkingLevel via literal string to avoid enum import since we don't have it explicitly bound
     if (thinking) {
-      config.thinkingConfig = { thinkingLevel: 'HIGH' }; // maps to ThinkingLevel.HIGH
+      modelName = "gemini-3.1-pro-preview";
+      config.thinkingConfig = { thinkingLevel: 'HIGH' }; 
     }
 
     // Generate output

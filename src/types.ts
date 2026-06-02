@@ -4,6 +4,11 @@ export interface Message {
   text: string;
   timestamp: string;
   sources?: any[];
+  attachment?: {
+    mimeType: string;
+    data: string; // base64 encoded
+    name: string;
+  };
 }
 
 export interface Conversation {
